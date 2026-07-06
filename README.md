@@ -28,7 +28,7 @@ The IR reciver breadboards for each of the soups are mounted on the bottom front
 Zipties were used to keep wires in order and to prevent them from getting tangled. Tape was also used to label each servo motor for organization purposes
 
 ## Firmware
-# Ir sensor firmware:
+# IR sensor firmware:
 - The IR (Infared Radiation) reciver is programmed to listen to IR signals sent by the IR emitter module which is done by pressing a joystick. When the gun is aimed towards the direction of the reciver module, the reciver LED will light up indicating you hit that sound.
 
 # Servo system firmware
