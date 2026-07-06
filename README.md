@@ -1,7 +1,7 @@
 <div align="center">
 
 # Shoot That Soup
-![zine](<image (1).png>)
+![zine](<zine.png>)
 When the world is ending, where can we release all our struggles, anger out on? Our team koiterers believes to have found an answer: Shoot The Soup.
 
 [INSERT IMAGE OF FINAL PRODUCT HERE]
