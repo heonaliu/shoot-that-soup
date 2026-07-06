@@ -1,101 +1,153 @@
 /*
- * IR ARCADE GUN — Transmitter firmware
- * ESP32
+ * IR ARCADE TARGET — Receiver firmware
+ * ESP32-S3
  *
- * Role: this board is the "gun". When you pull the trigger, it fires
- * an infrared NEC-encoded signal containing a fixed Address + Command.
- * Point it at a target running the matching receiver firmware, and
- * that target's Serial Monitor should print "HIT!".
+ * Role: this board is a "target" that gets shot by a gun.
+ * It listens for a specific NEC IR code (address + command),
+ * and when it sees a match, registers a "HIT":
+ *   - flashes the status LED
+ *   - prints to Serial
+ *   - (placeholder) increments a hit counter you can hook into game logic
  *
- * IMPORTANT: these values MUST match MY_TARGET_ADDRESS / MY_TARGET_COMMAND
- * in the receiver/target sketch, or the target will ignore the shot.
+ * The pushbutton on GPIO 5 is wired as a manual "reset / re-arm" button
+ * for testing — press it to reset the hit counter and simulate re-arming
+ * the target between rounds.
  *
- * HARDWARE (bare IR LED, no breakout module):
- *   - Trigger button on GPIO 5 (other leg to GND, uses INPUT_PULLUP)
- *   - IR LED wired directly to GPIO 4 through a resistor:
- *       GPIO 4 -> [220 ohm resistor] -> LED anode (long leg / +)
- *       LED cathode (short leg or flat-edge side / -) -> GND
- *     This drives the LED at GPIO-level current only, so expect
- *     roughly 1-3m of range. For more range, add an NPN transistor
- *     (2N2222/BC547/etc) as a driver stage:
- *       LED anode -> [220 ohm resistor] -> 5V
- *       LED cathode -> transistor collector
- *       transistor emitter -> GND
- *       transistor base -> [1k ohm resistor] -> GPIO 4
+ * TESTING IN WOKWI:
+ * While the simulation is running, click on the IR receiver component.
+ * A popup lets you type in an "Address" and "Command" value (both in hex,
+ * e.g. 0x00 and 0x01) and fire a simulated NEC IR signal at the receiver.
+ * Set MY_TARGET_ADDRESS / MY_TARGET_COMMAND below to match what you send
+ * in that popup, and you should see the LED flash + Serial print "HIT!".
  *
- * IRremote automatically handles the 38kHz carrier modulation for you —
- * you never manually toggle the LED pin. The library takes care of that
- * internally the moment you call IrSender.sendNEC().
+ * You can also just click the wokwi-ir-remote component's on-screen buttons
+ * (each sends a fixed NEC command, see Wokwi docs for the code table) to
+ * confirm the receiver picks up *something*, before testing exact-match logic.
  */
 
 #include <IRremote.hpp>
 
-// ---- Pin assignments ----
-#define IR_SEND_PIN     6
-#define TRIGGER_PIN     7
+// ---- Pin assignments (matches your diagram.json) ----
+#define IR_RECEIVE_PIN   15
+#define STATUS_LED_PIN   2
+#define RESET_BUTTON_PIN 5
 
-// ---- The IR code this gun fires ----
-// Must match the target's MY_TARGET_ADDRESS / MY_TARGET_COMMAND exactly.
-#define GUN_ADDRESS   0x00
-#define GUN_COMMAND   0x01
+// ---- The IR code this target should respond to ----
+// IMPORTANT: these are NOT fixed/special values you need to "achieve" —
+// they should exactly match whatever your actual remote printed to
+// Serial Monitor for whichever button you've decided to use as "fire".
+// e.g. if your remote printed:
+//     IR received -> Address: 0x0 Command: 0x7 Protocol: NEC
+// then set:
+//     MY_TARGET_ADDRESS 0x00
+//     MY_TARGET_COMMAND 0x07
+// Any button works fine as your "trigger" — pick one and use its real code.
+#define MY_TARGET_ADDRESS 0x00
+#define MY_TARGET_COMMAND 0x7
 
-// ---- Trigger debounce + fire-rate limiting ----
+// ---- State ----
+volatile unsigned int hitCount = 0;
+unsigned long lastHitFlashTime = 0;
+const unsigned long FLASH_DURATION_MS = 250;
+bool ledIsFlashing = false;
+
+// Simple debounce state for the reset button
 int lastButtonState = HIGH;
 unsigned long lastButtonChangeTime = 0;
 const unsigned long DEBOUNCE_MS = 40;
 
-unsigned long lastShotTime = 0;
-const unsigned long FIRE_COOLDOWN_MS = 300;
-
 void setup() {
   Serial.begin(115200);
-  delay(300);
+  delay(300); // let USB CDC on the S3 settle in the simulator
 
-  pinMode(TRIGGER_PIN, INPUT_PULLUP);
+  pinMode(STATUS_LED_PIN, OUTPUT);
+  digitalWrite(STATUS_LED_PIN, LOW);
 
-  IrSender.begin(IR_SEND_PIN);
+  pinMode(RESET_BUTTON_PIN, INPUT_PULLUP);
 
-  Serial.println(F("=== IR ARCADE GUN READY ==="));
-  Serial.print(F("Firing on GPIO "));
-  Serial.println(IR_SEND_PIN);
-  Serial.print(F("Shot code -> Address: 0x"));
-  Serial.print(GUN_ADDRESS, HEX);
+  IrReceiver.begin(IR_RECEIVE_PIN, DISABLE_LED_FEEDBACK);
+
+  Serial.println(F("=== IR ARCADE TARGET READY ==="));
+  Serial.print(F("Listening on GPIO "));
+  Serial.println(IR_RECEIVE_PIN);
+  Serial.print(F("Target code -> Address: 0x"));
+  Serial.print(MY_TARGET_ADDRESS, HEX);
   Serial.print(F(" Command: 0x"));
-  Serial.println(GUN_COMMAND, HEX);
-  Serial.println(F("Pull the trigger to fire!"));
+  Serial.println(MY_TARGET_COMMAND, HEX);
 }
 
 void loop() {
-  handleTrigger();
+  handleIrReception();
+  handleResetButton();
+  handleLedFlashTimeout();
 }
 
-void handleTrigger() {
-  int reading = digitalRead(TRIGGER_PIN);
+void handleIrReception() {
+  if (IrReceiver.decode()) {
+
+    // Always print what we received, even if it's not our code —
+    // this is how you'll debug in the simulator, since you'll see
+    // exactly what address/command values are arriving.
+    Serial.print(F("IR received -> Address: 0x"));
+    Serial.print(IrReceiver.decodedIRData.address, HEX);
+    Serial.print(F(" Command: 0x"));
+    Serial.print(IrReceiver.decodedIRData.command, HEX);
+    Serial.print(F(" Protocol: "));
+    Serial.println(getProtocolString(IrReceiver.decodedIRData.protocol));
+
+    bool isOurCode =
+      (IrReceiver.decodedIRData.address == MY_TARGET_ADDRESS) &&
+      (IrReceiver.decodedIRData.command == MY_TARGET_COMMAND);
+
+    // Ignore NEC "repeat" frames (held button) so one shot = one hit
+    bool isRepeat = (IrReceiver.decodedIRData.flags & IRDATA_FLAGS_IS_REPEAT);
+
+    if (isOurCode && !isRepeat) {
+      registerHit();
+    }
+
+    IrReceiver.resume(); // ready for next signal
+  }
+}
+
+void registerHit() {
+  hitCount++;
+  Serial.print(F(">>> HIT! Total hits: "));
+  Serial.println(hitCount);
+
+  digitalWrite(STATUS_LED_PIN, HIGH);
+  ledIsFlashing = true;
+  lastHitFlashTime = millis();
+
+  // ---- Hook your game logic here ----
+  // e.g. send score over ESP-NOW/WiFi, trigger a servo, play a sound, etc.
+}
+
+void handleLedFlashTimeout() {
+  if (ledIsFlashing && (millis() - lastHitFlashTime >= FLASH_DURATION_MS)) {
+    digitalWrite(STATUS_LED_PIN, LOW);
+    ledIsFlashing = false;
+  }
+}
+
+void handleResetButton() {
+  int reading = digitalRead(RESET_BUTTON_PIN);
 
   if (reading != lastButtonState) {
     lastButtonChangeTime = millis();
   }
 
   if ((millis() - lastButtonChangeTime) > DEBOUNCE_MS) {
-    static bool triggerHandled = false;
-
-    if (reading == LOW && !triggerHandled) {
-      fireShot();
-      triggerHandled = true;
+    // Button is pressed (active LOW because of INPUT_PULLUP)
+    static bool actionTaken = false;
+    if (reading == LOW && !actionTaken) {
+      hitCount = 0;
+      Serial.println(F("--- Target reset. Hit count cleared. ---"));
+      actionTaken = true;
     } else if (reading == HIGH) {
-      triggerHandled = false;
+      actionTaken = false;
     }
   }
 
   lastButtonState = reading;
-}
-
-void fireShot() {
-  if (millis() - lastShotTime < FIRE_COOLDOWN_MS) {
-    return;
-  }
-  lastShotTime = millis();
-
-  Serial.println(F(">>> FIRE!"));
-  IrSender.sendNEC(GUN_ADDRESS, GUN_COMMAND, 0);
 }
