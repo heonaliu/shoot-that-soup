@@ -1,6 +1,7 @@
 <div align="center">
 
 # Shoot That Soup
+![zine](zine.png)
 When the world is ending, where can we release all our struggles, anger out on? Our team koiterers believes to have found an answer: Shoot The Soup.
 
 [INSERT IMAGE OF FINAL PRODUCT HERE]
@@ -33,6 +34,11 @@ Zipties were used to keep wires in order and to prevent them from getting tangle
 
 # Servo system firmware
 The automated soups that move up and down are powered by 3 MG996R and MG995R servos (one for each soup). The firmware will randomly generate a number in which corresponds to a servo, once the servo is called it will lift the soup up. 
+
+# Building Process
+![parts](images/IMG_5153.jpg)
+![servo motors](images/IMG_5155.jpg)
+
 
 
 <div align="left">
