@@ -31,8 +31,8 @@
 #include <IRremote.hpp>
 
 // ---- Pin assignments ----
-#define IR_SEND_PIN     6 // gpio 6 but pin D4
-#define TRIGGER_PIN     7 // gpio 7 but pin D5
+#define IR_SEND_PIN     4 // gpio 6 but pin D4
+#define TRIGGER_PIN     6 // gpio 7 but pin D5
 
 // ---- The IR code this gun fires ----
 // Must match the target's MY_TARGET_ADDRESS / MY_TARGET_COMMAND exactly.
