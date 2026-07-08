@@ -49,7 +49,8 @@ The automated soups that move up and down are powered by 3 MG996R and MG995R ser
 </div>
 
 <div align="center">
-## assembly instructions
+
+## Assembly Instructions
 1. Get your box (it is preferable if you soupify it)
 2. Create a frame for your bottom stage, keep it simple with 2 collums!
 3. Prep your breadboards with everything you need, this includes:
