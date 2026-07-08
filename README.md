@@ -1,6 +1,7 @@
 <div align="center">
 
 # Shoot That Soup
+by the Koiterers: Erin Nguyen, Heona Liu, Shelley Ma for Hack Club Fallout 2026
 ![zine](<zine.png>)
 When the world is ending, where can we release all our struggles, anger out on? Our team koiterers believes to have found an answer: Shoot The Soup.
 
