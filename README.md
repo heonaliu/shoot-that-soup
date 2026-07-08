@@ -4,8 +4,6 @@
 ![zine](<zine.png>)
 When the world is ending, where can we release all our struggles, anger out on? Our team koiterers believes to have found an answer: Shoot The Soup.
 
-[INSERT IMAGE OF FINAL PRODUCT HERE]
-
 
 ## Overview of How It Works
 Shoot that Soup is a hardware game with an infared reciever and transmitter that allows the human to shoot the Soups that pop up and down. Aim the gun at the soup and shoot it down!! Only then you'll be able to find your inner peace <3 
