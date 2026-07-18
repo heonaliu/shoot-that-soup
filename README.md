@@ -2,6 +2,9 @@
 
 # Shoot That Soup
 by the Koiterers: [Erin Nguyen](https://github.com/Er1n-jpg), [Heona Liu](https://github.com/heonaliu), [Shelley Ma](https://github.com/shelxty) for Hack Club Fallout 2026
+
+DEMO -- [YouTube Demo Here!](https://youtu.be/3BV4w9TgHbA?si=AYdiHefdzXh664Bd)
+
 ![zine](<zine.png>)
 When the world is ending, where can we release all our struggles, anger out on? Our team koiterers believes to have found an answer: Shoot The Soup.
 
